@@ -1,11 +1,16 @@
 /*
  * Create a list that holds all of your cards
  */
-var cards = [];
-var cardsShown = [];
-var movesCounter = 0;
-var starsCounter = 3;
-var pairsMatched = 0;
+var deckElement; // deck HTML element
+var cards = []; // array of cards symbols in deck
+var cardsShown = []; // array of cards shown to user
+var cardsMatched = 0; // tracked number of cards matched
+var movesCounter = 0; // track how many cards flipped by user
+var starsCounter = 3; // track number of stars
+var timeInSeconds = 0; // track how many seconds since game start
+var hours = 0; // track how many hours since game start
+var minutes = 0; // track how many minutes since game start
+var timer; // timer that updates how many seconds since game start
 
 /*
  * Display the cards on the page
@@ -41,6 +46,15 @@ function cardDeckDisplay(cElements) {
 }
 
 /*
+ * Quickly show card deck to user and then hide cards in deck.
+ * @parm cElements are card elements within card deck
+ */
+function cardDeckFlashDisplay(cElements) {
+  cardDeckDisplay(cElements);
+  cardDeckHide(cElements)
+}
+
+/*
  * Hide all cards in card deck to user.
  * @parm cElements are card elements within card deck
  */
@@ -54,7 +68,7 @@ function cardDeckHide(cElements){
 }
 
 /*
- * Get card symbols in card elements of card deck element.
+ * Get card symbols in card elements of card deck HTML element.
  * @param cElements are card elements in deck
  * @param cardsArray to store card symbols
  */
@@ -84,6 +98,7 @@ function setupCardDeckDisplay(cdElement, cardsArray) {
 }
 
 /*
+ * Upon load of web page:
  * set up the event listener for a card. If a card is clicked:
  *  - display the card's symbol (put this functionality in another function that you call from this one)
  *  - add the card to a *list* of "open" cards (put this functionality in another function that you call from this one)
@@ -94,11 +109,10 @@ function setupCardDeckDisplay(cdElement, cardsArray) {
  *    + if all cards have matched, display a message with the final score (put this functionality in another function that you call from this one)
  */
  document.addEventListener("DOMContentLoaded", function(event) {
-   var deckElement = document.getElementsByClassName('deck')[0];
+   deckElement = document.getElementsByClassName('deck')[0];
    let cardElements = deckElement.getElementsByClassName('card');
    cards = getCardsInCardDeck(cardElements, []);
-   cardDeckDisplay(cardElements);
-   cardDeckHide(cardElements);
+   cardDeckFlashDisplay(cardElements); // quick display to user
 
    // Event listener for when user clicks on a card
    deckElement.addEventListener("click", function(event){
@@ -111,11 +125,7 @@ function setupCardDeckDisplay(cdElement, cardsArray) {
         if (cardsShown.length > 1){
           if (isCardsShownMatch(cardsShown)){
             cardsShownMatch(cardsShown);
-            pairsMatched++;
-            if (pairsMatched >= cards.length/2){
-              hideGamePanel();
-              displayWinPanel();
-            }
+            gameOver();
           } else { // no match, flip cards
             cardsShownNoMatch(cardsShown);
           }
@@ -127,24 +137,100 @@ function setupCardDeckDisplay(cdElement, cardsArray) {
    });
 
    // Event listener for when user clicks on restart game
-   let restartElement = document.getElementsByClassName('restart')[0];
-   restartElement.addEventListener("click", function(event){
+   let restartElements = document.getElementsByClassName('restart');
+   for (let r = 0; r < restartElements.length; r++) {
+     restartElements[r].addEventListener("click", function(event){
+       let c = event.target;
+       if (!c) return;
+       gameReset();
+     });
+   }
+
+   // Event listener for when user clicks on 'X' to close Winner modal
+   document.getElementsByClassName("close")[0].addEventListener("click", function(event){
      let c = event.target;
      if (!c) return;
-     movesCounter = 0;
-     movesCounterDisplay(movesCounter);
-     pairsMatched = 0;
-     resetStarsDisplay();
      hideWinPanel();
-     displayGamePanel();
-     shuffle(cards);
-     setupCardDeckDisplay(deckElement, cards);
-     cardElements = deckElement.getElementsByClassName('card');
-     cardDeckDisplay(cardElements);
-     cardDeckHide(cardElements);
    });
+
+   timerStart();
  });
 
+/*
+ * Reset the game:
+ * 1) Stop timer and reset time tracked
+ * 2) Reset counter to track number of moves
+ * 3) Reset count of matched pairs
+ * 4) Shuffle cards and set up display of cards
+ * 5) Restart timer
+ */
+function gameReset() {
+  hideWinPanel();
+  timerStop();
+  timeInSeconds = 0;
+  hours = 0;
+  minutes = 0;
+  updateTimerDisplay(0);
+  movesCounter = 0;
+  movesCounterDisplay(movesCounter);
+  cardsMatched = 0;
+  shuffle(cards);
+  setupCardDeckDisplay(deckElement, cards);
+  resetStarsDisplay();
+  cardElements = deckElement.getElementsByClassName('card');
+  cardDeckFlashDisplay(cardElements);
+  timerStart();
+}
+
+/*
+ * Check if all card pairs have matched then:
+ * 1) Stop timer
+ * 2) Display win message to user
+ */
+function gameOver() {
+  if (cardsMatched == cards.length){ // Game Over!
+    timerStop();
+    displayWinPanel();
+  }
+}
+
+/*
+ * Stop and clear timer that tracks how long game has been played.
+ */
+function timerStop() {
+  clearInterval(timer);
+}
+
+/*
+ * Start timer to track how long game has been played.
+ */
+function timerStart() {
+  timer = setInterval(function tick(){
+    timeInSeconds++;
+    updateTimerDisplay(timeInSeconds);
+  }, 1000);
+}
+
+/*
+ * Update display of timer displayed to user to show how long game has
+ * been played.
+ * @param totalSeconds is total seconds since game started
+ */
+function updateTimerDisplay(totalSeconds){
+  if (totalSeconds >= 3600) {
+    hours = Math.floor(totalSeconds / 3600);
+    totalSeconds %= 3600;
+  }
+  if (totalSeconds >= 60){
+    minutes = Math.floor(totalSeconds / 60);
+  }
+  let seconds = totalSeconds % 60;
+  // pad with leading zeroes
+  let timerElement = document.getElementById("timer");
+  timerElement.textContent = String(hours).padStart(2, "0") + ":" +
+    String(minutes).padStart(2, "0") + ":" +
+    String(seconds).padStart(2, "0");
+}
 
 /*
  * Show card's symbol to user.
@@ -185,6 +271,7 @@ function cardsShownMatch(openCardPair) {
     c.classList.remove("open");
     c.classList.remove("show");
   }
+  cardsMatched += 2; // track how many pairs of cards have matched
   return openCardPair;
 }
 
@@ -302,37 +389,30 @@ function resetStarsDisplay() {
 }
 
 /*
- * Display game panel to user like for a new game.
- */
-function displayGamePanel() {
-  let gamePanel = document.getElementsByClassName("game-panel")[0];
-  gamePanel.classList.remove("hidden");
-}
-
-/*
- * Hide game panel from user when game is over.
- */
-function hideGamePanel() {
-  let gamePanel = document.getElementsByClassName("game-panel")[0];
-  gamePanel.classList.add("hidden");
-}
-
-/*
  * Display win panel to user with a win message.
  */
 function displayWinPanel(){
   let winMsg = document.getElementById("win_message");
-  winMsg.textContent = "Congratulations! You completed in x time";
-  if (starsCounter > 0){
-    if (starsCounter > 1){
-      winMsg.textContent +=  " and "+ starsCounter + " stars";
+  winMsg.textContent = "You completed within ";
+  if (hours > 0){
+    winMsg.textContent += hours + " hour";
+    if (hours > 1) winMsg.textContent += "s";
+  } else {
+    if (minutes > 0){
+      winMsg.textContent += minutes + " minute";
+      if (minutes > 1) winMsg.textContent += "s";
     } else {
-      winMsg.textContent +=  " and 1 star";
+      winMsg.textContent += timeInSeconds + " seconds";
     }
   }
-  winMsg.textContent +=  ".";
+
+  if (starsCounter > 0){
+    winMsg.textContent +=  " with "+ starsCounter + " star";
+    if (starsCounter > 1) winMsg.textContent +=  "s";
+    winMsg.textContent +=  " left";
+  }
   let winPanel = document.getElementsByClassName("win-panel")[0];
-  winPanel.classList.remove("hidden");
+  winPanel.style.display = "block";
 }
 
 /*
@@ -340,5 +420,5 @@ function displayWinPanel(){
  */
 function hideWinPanel(){
   let winPanel = document.getElementsByClassName("win-panel")[0];
-  winPanel.classList.add("hidden");
+  winPanel.style.display = "none";
 }
