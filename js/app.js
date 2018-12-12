@@ -8,8 +8,6 @@ var cardsMatched = 0; // tracked number of cards matched
 var movesCounter = 0; // track how many cards flipped by user
 var starsCounter = 3; // track number of stars
 var timeInSeconds = 0; // track how many seconds since game start
-var hours = 0; // track how many hours since game start
-var minutes = 0; // track how many minutes since game start
 var timer; // timer that updates how many seconds since game start
 
 /*
@@ -217,10 +215,12 @@ function timerStart() {
  * @param totalSeconds is total seconds since game started
  */
 function updateTimerDisplay(totalSeconds){
+  let hours = 0;
   if (totalSeconds >= 3600) {
     hours = Math.floor(totalSeconds / 3600);
     totalSeconds %= 3600;
   }
+  let minutes = 0;
   if (totalSeconds >= 60){
     minutes = Math.floor(totalSeconds / 60);
   }
@@ -394,22 +394,29 @@ function resetStarsDisplay() {
 function displayWinPanel(){
   let winMsg = document.getElementById("win_message");
   winMsg.textContent = "You completed within ";
-  if (hours > 0){
-    winMsg.textContent += hours + " hour";
-    if (hours > 1) winMsg.textContent += "s";
+  if (timeInSeconds >= 3600) { // more than an hour
+    winMsg.textContent += document.getElementById("timer").textContent;
   } else {
-    if (minutes > 0){
+    if (timeInSeconds >= 60){
+      let minutes = Math.floor(timeInSeconds / 60);
       winMsg.textContent += minutes + " minute";
-      if (minutes > 1) winMsg.textContent += "s";
-    } else {
-      winMsg.textContent += timeInSeconds + " seconds";
+      if (minutes > 1) winMsg.textContent +=  "s";
+    }
+    let seconds = timeInSeconds % 60;
+    if (seconds > 0){
+      if (timeInSeconds >= 60){ // means more than a minute
+        winMsg.textContent += " ";
+      }
+      winMsg.textContent += seconds + " second";
+      if (seconds > 1) winMsg.textContent +=  "s";
     }
   }
-
   if (starsCounter > 0){
     winMsg.textContent +=  " with "+ starsCounter + " star";
     if (starsCounter > 1) winMsg.textContent +=  "s";
-    winMsg.textContent +=  " left";
+    winMsg.textContent +=  " left!";
+  } else {
+    winMsg.textContent +=  ".";
   }
   let winPanel = document.getElementsByClassName("win-panel")[0];
   winPanel.style.display = "block";
