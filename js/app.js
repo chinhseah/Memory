@@ -1,14 +1,13 @@
 /*
  * Create a list that holds all of your cards
  */
-var deckElement; // deck HTML element
-var cards = []; // array of cards symbols in deck
-var cardsShown = []; // array of cards shown to user
-var cardsMatched = 0; // tracked number of cards matched
-var movesCounter = 0; // track how many cards flipped by user
-var starsCounter = 3; // track number of stars
-var timeInSeconds = 0; // track how many seconds since game start
-var timer; // timer that updates how many seconds since game start
+let deckElement; // deck HTML element
+let cards = []; // array of cards symbols in deck
+let cardsShown = []; // array of cards shown to user
+let cardsMatched = 0; // tracked number of cards matched
+let movesCounter = 0; // track how many cards flipped by user
+let timeInSeconds = 0; // track how many seconds since game start
+let timer; // timer that updates how many seconds since game start
 
 /*
  * Display the cards on the page
@@ -119,18 +118,18 @@ function setupCardDeckDisplay(cdElement, cardsArray) {
      if (!deckElement.contains(c)) return;
      if (c.classList.length == 1) { // means not opened or matched
         cardShow(c);
+        movesCounter = movesIncrement(movesCounter);
+        movesCounterDisplay(movesCounter);
+        let starsCounter = updateStarsDisplay(movesCounter);
         addCardsShown(c, cardsShown);
         if (cardsShown.length > 1){
           if (isCardsShownMatch(cardsShown)){
             cardsShownMatch(cardsShown);
-            gameOver();
+            gameOver(starsCounter);
           } else { // no match, flip cards
             cardsShownNoMatch(cardsShown);
           }
         }
-        movesCounter = movesIncrement(movesCounter);
-        movesCounterDisplay(movesCounter);
-        updateStarsDisplay(movesCounter);
      }
    });
 
@@ -184,11 +183,12 @@ function gameReset() {
  * Check if all card pairs have matched then:
  * 1) Stop timer
  * 2) Display win message to user
+ * @parm starsLeft is number of stars left
  */
-function gameOver() {
+function gameOver(starsLeft) {
   if (cardsMatched == cards.length){ // Game Over!
     timerStop();
-    displayWinPanel();
+    displayWinPanel(starsLeft);
   }
 }
 
@@ -360,15 +360,17 @@ function movesCounterDisplay(counter){
  */
 function updateStarsDisplay(counter){
   let stars = document.getElementsByClassName("fa-star");
-  starsCounter = stars.length;
-  // for every 20 moves, remove a star
-  if (counter > 0 && starsCounter > 0){
-    let z = counter % 20;
+
+  // for every 16 moves (or number of cards), remove a star
+  if (counter > 0 && stars.length > 0){
+    let penaltyLimit = cards.length + 1; 
+    let z = counter % penaltyLimit;
     if (z == 0){
-      starsCounter--;
-      stars[starsCounter].className = "fa fa-star-o";
+      stars[0].classList.add("fa-star-o");
+      stars[0].classList.remove("fa-star");
     }
   }
+  return stars.length;
 }
 
 /*
@@ -390,8 +392,9 @@ function resetStarsDisplay() {
 
 /*
  * Display win panel to user with a win message.
+ * @parm starsLeft is number of stars left
  */
-function displayWinPanel(){
+function displayWinPanel(starsLeft){
   let winMsg = document.getElementById("win_message");
   winMsg.textContent = "You completed within ";
   if (timeInSeconds >= 3600) { // more than an hour
@@ -411,9 +414,9 @@ function displayWinPanel(){
       if (seconds > 1) winMsg.textContent +=  "s";
     }
   }
-  if (starsCounter > 0){
-    winMsg.textContent +=  " with "+ starsCounter + " star";
-    if (starsCounter > 1) winMsg.textContent +=  "s";
+  if (starsLeft > 0){
+    winMsg.textContent +=  " with "+ starsLeft + " star";
+    if (starsLeft > 1) winMsg.textContent +=  "s";
     winMsg.textContent +=  " left!";
   } else {
     winMsg.textContent +=  ".";
